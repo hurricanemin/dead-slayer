@@ -4,17 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using Helpers.Utilities;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 using UnityEngine;
 using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-namespace Helpers.Utils
+namespace Helpers.Utilities
 {
     public static class Extensions
     {
@@ -23,31 +19,23 @@ namespace Helpers.Utils
             return string.Format(target, args);
         }
 
-        public static string ToLowerUS(this string target)
+        public static string ToLowerUs(this string target)
         {
             return target.ToLower(new CultureInfo("en-US", false));
         }
 
-        public static string ToUpperUS(this string target)
+        public static string ToUpperUs(this string target)
         {
             return target.ToUpper(new CultureInfo("en-US", false));
         }
 
-        public static string ReplaceWith(string mainText, char placeHolder, string replacement)
+        private static string ReplaceWith(string mainText, string placeHolder, string replacement)
         {
-            List<char> taskTextString = new List<char>();
-            int textLength = mainText.Length;
-
-            for (int i = 0; i < textLength; i++)
-            {
-                if (mainText[i] == placeHolder) taskTextString.InsertRange(i, replacement);
-                else taskTextString.Add(mainText[i]);
-            }
-
-            return new string(taskTextString.ToArray());
+            while (mainText.Contains(placeHolder)) mainText = mainText.Replace(placeHolder, replacement);
+            return mainText;
         }
 
-        public static string ReplaceWith(string mainText, char[] placeHolder, string[] replacement)
+        public static string ReplaceWith(this string mainText, string[] placeHolder, string[] replacement)
         {
             int placeHolderCount = placeHolder.Length;
             int replacementCount = replacement.Length;
@@ -246,10 +234,18 @@ namespace Helpers.Utils
         {
             return ((double)target).ReturnWithUnit(digits);
         }
-
-        public static void SetAlpha(this Image image, float a)
+        
+        public static void SetAlpha(this Graphic image, float a)
         {
-            image.color = image.color.WithAlpha(a);
+            var color = image.color;
+            color.a = a;
+            image.color = color;
+        }
+        
+        public static Color SetAlpha(this Color color, float a)
+        {
+            color.a = a;
+            return color;
         }
 
         public static Color Rgb2Gray(this Image image)
@@ -259,17 +255,10 @@ namespace Helpers.Utils
             return (Color.white * grayScaleValue).SetAlpha(1);
         }
 
-        public static Color SetAlpha(this Color color, float a)
-        {
-            color.a = a;
-            return color;
-        }
-
         public static TValue GetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary,
-            TKey key, TValue defaultValue = default(TValue))
+            TKey key, TValue defaultValue = default)
         {
-            TValue value;
-            return dictionary.TryGetValue(key, out value) ? value : defaultValue;
+            return dictionary.TryGetValue(key, out TValue value) ? value : defaultValue;
         }
 
         public static int IndexOf<T>(this T[] arr, T value)
@@ -279,38 +268,67 @@ namespace Helpers.Utils
 
         #region Transform
 
-        public static Transform FindDeepChild(this Transform parent, string searchName)
+        public static Transform FindDeepChild(this Transform parent, string searchName, string[] avoid = null,
+            bool isCaseSensitive = true)
         {
-            Queue<Transform> queue = new Queue<Transform>();
-            queue.Enqueue(parent);
-            while (queue.Count > 0)
-            {
-                var c = queue.Dequeue();
-                if (c.name == searchName)
-                    return c;
-                foreach (Transform t in c)
-                    queue.Enqueue(t);
-            }
-
-            return null;
-        }
-
-        public static Transform FindDeepChildContain(this Transform parent, string searchName, string[] avoid)
-        {
-            bool shouldAvoid = avoid.Length > 0;
+            bool shouldAvoid = avoid != null;
+            int avoidCount = shouldAvoid ? avoid.Length : 0;
             Queue<Transform> queue = new Queue<Transform>();
             queue.Enqueue(parent);
 
             while (queue.Count > 0)
             {
                 var c = queue.Dequeue();
-                if (c.name.Contains(searchName) && c != parent)
+                bool contains = isCaseSensitive
+                    ? string.Equals(c.name, searchName, StringComparison.CurrentCulture)
+                    : string.Equals(c.name, searchName, StringComparison.CurrentCultureIgnoreCase);
+
+                if (contains)
                 {
                     if (shouldAvoid)
                     {
                         bool isCompatible = true;
 
-                        for (int i = 0; i < avoid.Length; i++)
+                        for (int i = 0; i < avoidCount; i++)
+                        {
+                            if (!c.name.Contains(avoid[i])) continue;
+                            isCompatible = false;
+                            break;
+                        }
+
+                        if (isCompatible) return c;
+                    }
+                    else return c;
+                }
+
+                foreach (Transform t in c) queue.Enqueue(t);
+            }
+
+            return null;
+        }
+
+        public static Transform FindDeepChildContain(this Transform parent, string searchName, string[] avoid = null,
+            bool isCaseSensitive = true)
+        {
+            bool shouldAvoid = avoid != null;
+            int avoidCount = shouldAvoid ? avoid.Length : 0;
+            Queue<Transform> queue = new Queue<Transform>();
+            queue.Enqueue(parent);
+
+            while (queue.Count > 0)
+            {
+                var c = queue.Dequeue();
+                var candidateName = !isCaseSensitive ? c.name.ToLower() : c.name;
+                var search = !isCaseSensitive ? searchName.ToLower() : searchName;
+                bool contains = candidateName.Contains(search) || candidateName.Equals(search);
+
+                if (contains && c != parent)
+                {
+                    if (shouldAvoid)
+                    {
+                        bool isCompatible = true;
+
+                        for (int i = 0; i < avoidCount; i++)
                         {
                             if (!c.name.Contains(avoid[i])) continue;
                             isCompatible = false;
@@ -325,43 +343,17 @@ namespace Helpers.Utils
                     }
                 }
 
-                foreach (Transform t in c)
-                    queue.Enqueue(t);
-            }
-
-            return null;
-        }
-
-        public static Transform FindDeepChildContain(this Transform parent, string searchName, string avoid)
-        {
-            bool shouldAvoid = avoid.Any();
-            Queue<Transform> queue = new Queue<Transform>();
-            queue.Enqueue(parent);
-
-            while (queue.Count > 0)
-            {
-                var c = queue.Dequeue();
-                if (c.name.Contains(searchName) && c != parent)
-                {
-                    if (shouldAvoid)
-                    {
-                        if (!c.name.Contains(avoid)) return c;
-                    }
-                    else
-                    {
-                        return c;
-                    }
-                }
-
                 foreach (Transform t in c) queue.Enqueue(t);
             }
 
             return null;
         }
 
-        public static Transform[] FindDeepChildrenContain(this Transform parent, string searchName, string avoid)
+        public static Transform[] FindDeepChildrenContain(this Transform parent, string searchName,
+            string[] avoid = null, bool isCaseSensitive = true)
         {
-            bool shouldAvoid = avoid.Any();
+            bool shouldAvoid = avoid != null;
+            int avoidCount = shouldAvoid ? avoid.Length : 0;
             List<Transform> found = new List<Transform>();
             List<Transform> children = parent.GetDeepChildren().ToList();
             int childrenCount = children.Count;
@@ -369,39 +361,16 @@ namespace Helpers.Utils
             for (int i = 0; i < childrenCount; i++)
             {
                 Transform c = children[i];
-                if (!c.name.Contains(searchName) || c == parent) continue;
-
-                if (shouldAvoid)
-                {
-                    if (!c.name.Contains(avoid)) found.Add(c);
-                }
-                else
-                {
-                    found.Add(c);
-                }
-            }
-
-            return found.ToArray();
-        }
-
-        public static Transform[] FindDeepChildrenContain(this Transform parent, string searchName, string[] avoid)
-        {
-            int avoidCount = avoid.Length;
-            bool shouldAvoid = avoidCount > 0;
-            List<Transform> found = new List<Transform>();
-            List<Transform> children = parent.GetDeepChildren().ToList();
-            int childrenCount = children.Count;
-
-            for (int i = 0; i < childrenCount; i++)
-            {
-                Transform c = children[i];
-                if (!c.name.Contains(searchName) || c == parent) continue;
+                var candidateName = isCaseSensitive ? c.name.ToLower() : c.name;
+                var search = isCaseSensitive ? searchName.ToLower() : searchName;
+                bool contains = candidateName.Contains(search) || candidateName.Equals(search);
+                if (!contains || c == parent) continue;
 
                 if (shouldAvoid)
                 {
                     bool isCompatible = true;
 
-                    for (int j = 0; j < avoid.Length; j++)
+                    for (int j = 0; j < avoidCount; j++)
                     {
                         if (!c.name.Contains(avoid[j])) continue;
                         isCompatible = false;
@@ -419,6 +388,64 @@ namespace Helpers.Utils
             return found.ToArray();
         }
 
+        public static Transform ReturnBaseParent(this Transform t)
+        {
+            Transform tempTrans = t;
+
+            while (true)
+            {
+                if (tempTrans.parent != null) tempTrans = tempTrans.parent;
+                else return tempTrans;
+            }
+        }
+
+        public static Transform FindParent(this Transform transform, string searchName, string[] avoid = null,
+            bool isCaseSensitive = false)
+        {
+            bool shouldAvoid = avoid != null;
+            int avoidCount = shouldAvoid ? avoid.Length : 0;
+            Transform tempTrans = transform;
+
+            while (true)
+            {
+                Transform targetParent = tempTrans.parent;
+
+                if (targetParent != null)
+                {
+                    var candidateName = targetParent.name;
+                    bool contains = candidateName.Equals(searchName,
+                        isCaseSensitive
+                            ? StringComparison.InvariantCultureIgnoreCase
+                            : StringComparison.InvariantCulture);
+
+                    if (!contains)
+                    {
+                        tempTrans = targetParent;
+                        continue;
+                    }
+
+                    if (shouldAvoid)
+                    {
+                        bool isCompatible = true;
+
+                        for (int i = 0; i < avoidCount; i++)
+                        {
+                            if (!candidateName.Contains(avoid[i])) continue;
+                            isCompatible = false;
+                            break;
+                        }
+
+                        if (isCompatible) return targetParent;
+                    }
+                    else
+                    {
+                        return targetParent;
+                    }
+                }
+                else return null;
+            }
+        }
+
         public static void ResetLocal(this Transform t)
         {
             t.localPosition = Vector3.zero;
@@ -427,29 +454,11 @@ namespace Helpers.Utils
 
         public static void DestroyChildren(this Transform t)
         {
-            t.Cast<Transform>().ToList().ForEach(c => Object.Destroy(c.gameObject));
-        }
-
-        public static void DestroyChildrenImmediate(this Transform t)
-        {
+#if UNITY_EDITOR
             t.Cast<Transform>().ToList().ForEach(c => Object.DestroyImmediate(c.gameObject));
-        }
-
-        public static Transform ReturnMainParent(this Transform t)
-        {
-            Transform tempTrans = t;
-
-            while (true)
-            {
-                if (tempTrans.parent != null)
-                {
-                    tempTrans = tempTrans.parent;
-                }
-                else
-                {
-                    return tempTrans;
-                }
-            }
+#else
+            t.Cast<Transform>().ToList().ForEach(c => Object.Destroy(c.gameObject));
+#endif
         }
 
         public static Transform[] GetChildren(this Transform transform)
@@ -483,42 +492,45 @@ namespace Helpers.Utils
         public static Coroutine InvokeWithDelay(this MonoBehaviour mono, float delay, Action target,
             bool isTimeScaled = true)
         {
-            return mono.StartCoroutine(CoroutineUtilities.DelayedExecutionCoroutine(delay, target, isTimeScaled));
+            return mono.StartCoroutine(CoroutineUtil.DelayedExecutionCoroutine(delay, target, isTimeScaled));
         }
 
         public static Coroutine InvokeNextFrame(this MonoBehaviour mono, Action target, int frameCount = 1)
         {
-            return mono.StartCoroutine(CoroutineUtilities.NextFrameCoroutine(target, frameCount));
+            return mono.StartCoroutine(CoroutineUtil.NextFrameCoroutine(target, frameCount));
         }
 
         public static void SafeStop(this MonoBehaviour mono, Coroutine coroutine)
         {
-            if (coroutine != null)
-                mono.StopCoroutine(coroutine);
-        }
-
-        public static void RemoveComponentIfExistsImmediate<T>(this GameObject gameObject) where T : Component
-        {
-            T component = gameObject.GetComponent<T>();
-            if (component != null) Object.DestroyImmediate(component);
-        }
-
-        public static void RemoveComponentsIfExistsImmediate<T>(this GameObject obj) where T : Component // TODO
-        {
-            var t = obj.GetComponents<T>();
-            for (var i = 0; i < t.Length; i++) Object.DestroyImmediate(t[i]);
+            if (coroutine != null) mono.StopCoroutine(coroutine);
         }
 
         public static void RemoveComponentIfExists<T>(this GameObject gameObject) where T : Component
         {
             T component = gameObject.GetComponent<T>();
-            if (component != null) Object.Destroy(component);
+
+            if (component != null)
+            {
+#if UNITY_EDITOR
+                Object.DestroyImmediate(component);
+#else
+                Object.Destroy(component);
+#endif
+            }
         }
 
         public static void RemoveComponentsIfExists<T>(this GameObject obj) where T : Component // TODO
         {
-            var t = obj.GetComponents<T>();
-            for (var i = 0; i < t.Length; i++) Object.Destroy(t[i]);
+            T[] t = obj.GetComponents<T>();
+
+            for (var i = 0; i < t.Length; i++)
+            {
+#if UNITY_EDITOR
+                Object.DestroyImmediate(t[i]);
+#else
+                Object.Destroy(t[i]);
+#endif
+            }
         }
 
         #endregion
@@ -618,6 +630,49 @@ namespace Helpers.Utils
             return distributedElements;
         }
 
+        public static Vector3[] LineUpByPoint(TransformData pointData, int elementCount, float elementDiameter,
+            int lateralSize, int verticalSize = -1, bool shouldCenter = true)
+        {
+            lateralSize = lateralSize <= 0 ? 3 : lateralSize;
+            bool isVerticalSizeSet = verticalSize > 0;
+
+            if (isVerticalSizeSet)
+            {
+                int maxSize = verticalSize * lateralSize;
+                elementCount = elementCount > maxSize ? maxSize : elementCount;
+            }
+
+            Vector3[] distributedElements = new Vector3[elementCount];
+            int viableVerticalSize = Mathf.Clamp(Mathf.CeilToInt((float)elementCount / lateralSize), 1,
+                isVerticalSizeSet ? verticalSize : 99999);
+            Vector3 targetPosition = pointData.Position;
+            Vector3 targetRight =
+                Vector3.right.RotatePositionAroundPoint(Vector3.zero, pointData.Rotation);
+            Vector3 targetForward =
+                Vector3.forward.RotatePositionAroundPoint(Vector3.zero, pointData.Rotation);
+            float verticalShiftLength = shouldCenter ? elementDiameter * (viableVerticalSize - 1) / 2 : 0;
+            int sizeIndex = 0;
+            if (isVerticalSizeSet)
+                elementCount = lateralSize * verticalSize < elementCount ? lateralSize * verticalSize : elementCount;
+
+            for (int i = 0; i < elementCount; i++)
+            {
+                int currentBatchSize = elementCount - sizeIndex >= lateralSize ? lateralSize : elementCount - sizeIndex;
+                float lateralShiftLength = elementDiameter * (currentBatchSize - 1) / 2;
+                Vector3 startPosition = targetPosition - lateralShiftLength * targetRight +
+                                        verticalShiftLength * targetForward;
+
+                for (int k = 0; k < currentBatchSize; k++)
+                {
+                    distributedElements[sizeIndex] =
+                        startPosition + elementDiameter * (targetRight * k - targetForward * i);
+                    sizeIndex++;
+                }
+            }
+
+            return distributedElements;
+        }
+
         public static Vector3 Get3D(this Vector2 vector2)
         {
             return new Vector3(vector2.x, vector2.y, 0);
@@ -652,6 +707,11 @@ namespace Helpers.Utils
         public static Vector2 GetXyVector(this Vector3 vector3)
         {
             return new Vector2(vector3.x, vector3.y);
+        }
+
+        public static Vector2 GetYZVector(this Vector3 vector3)
+        {
+            return new Vector2(vector3.y, vector3.z);
         }
 
         public static Vector2 InverseScale(this Vector2 v)
@@ -839,27 +899,29 @@ namespace Helpers.Utils
 
         private static bool IsPointValid(Vector2 candidate, float radius, List<Vector2> points, Vector2 bounds)
         {
-            if (candidate.x >= 0 && candidate.x <= bounds.x &&
-                candidate.y >= 0 && candidate.y <= bounds.y)
-            {
-                for (int i = 0; i < points.Count; i++)
-                {
-                    if ((points[i] - candidate).magnitude <= radius) // Acceptable distance check.
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            return false;
+            if (!(candidate.x >= 0) || !(candidate.x <= bounds.x) || !(candidate.y >= 0) ||
+                !(candidate.y <= bounds.y)) return false;
+            int pointCount = points.Count;
+            for (int i = 0; i < pointCount; i++)
+                if ((points[i] - candidate).magnitude <= radius)
+                    return false;
+            return true;
         }
 
         #endregion
 
-        public static bool IsInViewConeXZ(Vector3 position, Vector3 forward, float fov, float viewRange,
-            Vector3 targetPos)
+        public static bool IsInViewCone(Vector3 eyePosition, Vector3 lookDirection, float fieldOfView, float sightRange,
+            Vector3 targetObjectPosition)
+        {
+            bool isInVerticalViewCone =
+                IsInViewConeYZ(eyePosition, lookDirection, fieldOfView, sightRange, targetObjectPosition);
+            return isInVerticalViewCone &&
+                   IsInViewConeXZ(eyePosition, lookDirection, fieldOfView, sightRange, targetObjectPosition);
+        }
+
+        public static bool IsInViewConeXZ(Vector3 eyePosition, Vector3 lookDirection, float fieldOfView,
+            float sightRange,
+            Vector3 targetObjectPosition)
         {
             bool isEditor;
 #if UNITY_EDITOR
@@ -872,36 +934,26 @@ namespace Helpers.Utils
             int screenHeight = isEditor ? mainCamera.pixelHeight : Screen.height;
             int screenWidth = isEditor ? mainCamera.pixelWidth : Screen.width;
             float ratio = (float)screenWidth / screenHeight;
-            fov *= ratio;
-            Vector2 positionDifference = (targetPos - position).GetXzVector();
-            bool isInViewRange = positionDifference.magnitude <= viewRange;
+            fieldOfView *= ratio;
+            Vector2 positionDifference = (targetObjectPosition - eyePosition).GetXzVector();
+            bool isInViewRange = positionDifference.magnitude <= sightRange;
             if (!isInViewRange) return false;
             Vector2 positionForward = positionDifference.normalized;
-            float angleBetween = Vector2.Angle(forward.GetXzVector(), positionForward);
-            return angleBetween <= fov / 2;
+            float angleBetween = Vector2.Angle(lookDirection.GetXzVector(), positionForward);
+            return angleBetween <= fieldOfView / 2;
         }
 
-        public static void AddTag(string tag)
+        public static bool IsInViewConeYZ(Vector3 eyePosition, Vector3 lookDirection, float fieldOfView,
+            float sightRange,
+            Vector3 targetObjectPosition)
         {
-#if UNITY_EDITOR
-            Object[] asset = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
-            if (asset == null || asset.Length <= 0) return;
-            SerializedObject so = new SerializedObject(asset[0]);
-            SerializedProperty tags = so.FindProperty("tags");
-
-            for (int i = 0; i < tags.arraySize; ++i)
-            {
-                if (tags.GetArrayElementAtIndex(i).stringValue != tag) continue;
-                return;
-            }
-
-            tags.InsertArrayElementAtIndex(tags.arraySize);
-            tags.GetArrayElementAtIndex(tags.arraySize - 1).stringValue = tag;
-            so.ApplyModifiedProperties();
-            so.Update();
-#endif
+            Vector2 positionDifference = (targetObjectPosition - eyePosition).GetYZVector();
+            bool isInViewRange = positionDifference.magnitude <= sightRange;
+            if (!isInViewRange) return false;
+            Vector2 positionForward = positionDifference.normalized;
+            float angleBetween = Vector2.Angle(lookDirection.GetYZVector(), positionForward);
+            return angleBetween <= fieldOfView / 2;
         }
-
 
         public static int ReturnSystemVersion()
         {
@@ -941,52 +993,5 @@ namespace Helpers.Utils
             if (isParsedSuccessfully) Debug.Log("OS version: {0}".Format(systemVersion));
             return isParsedSuccessfully ? systemVersion : 0;
         }
-
-        #region Animation
-
-        public static void UpdateSkinnedMeshRendererBones(this SkinnedMeshRenderer skinnedMeshRenderer,
-            Transform newRootBone)
-        {
-            string rootName = "";
-            if (skinnedMeshRenderer.rootBone != null) rootName = skinnedMeshRenderer.rootBone.name;
-            Transform newRoot = null;
-            Transform[] bones = skinnedMeshRenderer.bones;
-            Transform[] newBones = new Transform[bones.Length];
-            Transform[] existingBones = newRootBone.GetComponentsInChildren<Transform>(true);
-
-            for (int i = 0; i < bones.Length; i++)
-            {
-                if (bones[i] == null)
-                {
-                    Debug.LogError("Bone index of {0} doesn't exits!".Format(i));
-                    return;
-                }
-
-                bool found = false;
-
-                foreach (var newBone in existingBones)
-                {
-                    if (newBone.name == rootName) newRoot = newBone;
-                    if (newBone.name != bones[i].name) continue;
-                    newBones[i] = newBone;
-                    found = true;
-                }
-
-                if (found) continue;
-                Debug.LogError("Couldn't find bone {0} on target rig!".Format(bones[i].name));
-                return;
-            }
-
-            if (newRoot == null)
-            {
-                Debug.LogError("Couldn't find root bone {0} on target rig!".Format(skinnedMeshRenderer.rootBone));
-                return;
-            }
-
-            skinnedMeshRenderer.bones = newBones;
-            skinnedMeshRenderer.rootBone = newRoot;
-        }
-
-        #endregion
     }
 }
