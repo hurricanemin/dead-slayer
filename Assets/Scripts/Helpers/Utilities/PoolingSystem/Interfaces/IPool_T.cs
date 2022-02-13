@@ -6,7 +6,7 @@ namespace Helpers.Utilities.PoolingSystem.Interfaces
     {
     }
 
-    public interface IPool<T0> : IPool, IDisposable
+    public interface IPool<in T0> : IPool, IDisposable
     {
         public int AvailableObjectCount { get; }
         public int BusyObjectCount { get; }
