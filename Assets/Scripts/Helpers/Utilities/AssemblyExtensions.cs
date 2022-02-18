@@ -2,11 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnityEngine;
 
 namespace Helpers.Utilities
 {
     public static class AssemblyExtensions
     {
+        public static List<Type> FindParentClasses(this Type childClass)
+        {
+            Type parentType = childClass.BaseType;
+            List<Type> parentClasses = new List<Type>();
+
+            while (parentType != null && parentType != typeof(MonoBehaviour) && parentType != typeof(Component))
+            {
+                parentClasses.Add(parentType);
+                parentType = parentType.BaseType;
+            }
+
+            return parentClasses;
+        }
+
         public static List<Type> FindChildClasses(this Type parentClass)
         {
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();

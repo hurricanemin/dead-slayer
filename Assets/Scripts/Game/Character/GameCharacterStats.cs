@@ -1,5 +1,5 @@
 using System;
-using Helpers.Utilities;
+using Helpers.Utilities.PoolingSystem.PoolManagerBases;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -30,13 +30,11 @@ namespace Game.Character
         public float currentHp;
     }
 
-    public class GameCharacterSaveData
+    public class GameCharacterSaveData : ObjectSaveData
     {
-        // TODO Some kind of id?
         [JsonProperty("runtime_stats")] public CharacterRuntimeStats characterRuntimeStats;
-        [JsonProperty("transform_data")] public SerializedTransformData transformData;
     }
-    
+
     public enum GameCharacterType : byte
     {
         Custom,

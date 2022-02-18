@@ -588,6 +588,12 @@ namespace Helpers.Utilities
             Quaternion lookRotation = Quaternion.LookRotation(vector3, upDirection);
             return lookRotation * rotationAmount * Vector3.forward;
         }
+        
+        public static Vector3 RotateForward(this Vector2 vector2, Vector3 upDirection, Quaternion rotationAmount)
+        {
+            Quaternion lookRotation = Quaternion.LookRotation(vector2.Get3D(), upDirection);
+            return lookRotation * rotationAmount * Vector3.forward;
+        }
 
         public static Vector3[] LineUpByPoint(Transform pointTransform, int elementCount, float elementDiameter,
             int lateralSize, int verticalSize = -1, bool shouldCenter = true)

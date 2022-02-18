@@ -6,8 +6,8 @@ namespace Helpers.AutoObject
     public abstract class AutoObject : MonoBehaviour
     {
         [SerializeField] [AutomatedField(SearchIn.Root, SearchType.FirstEncounter)]
-        protected Transform objectTransform;
-        
-        protected bool areReferencesSet;
+        public Transform objectTransform;
+
+        [SerializeField] [HideInInspector] protected bool areReferencesSet;
     }
 }

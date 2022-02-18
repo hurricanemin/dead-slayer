@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using Helpers.Utilities;
 using Helpers.Utilities.AutomatedFieldSystem.CustomAttributes;
 using Helpers.Utilities.Editor;
 using UnityEditor;
@@ -12,7 +11,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
-namespace Helpers.Utils.AutomatedFieldSystem.Editor
+namespace Helpers.Utilities.AutomatedFieldSystem.Editor
 {
     public static class FieldExtensions
     {
@@ -40,10 +39,19 @@ namespace Helpers.Utils.AutomatedFieldSystem.Editor
                 {
                     if (component.IsComponentPartOfAPrefabInstance()) continue;
                     Type componentType = component.GetType();
-                    bool hasAutomatedFields = componentType
-                        .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Any(x =>
-                            x.CustomAttributes.FirstOrDefault(y => y.AttributeType == typeof(AutomatedField)) != null &&
-                            x.IsSerialized());
+                    List<Type> typesToSearch = componentType.FindParentClasses();
+                    typesToSearch.Add(componentType);
+                    bool hasAutomatedFields = false;
+
+                    foreach (var type in typesToSearch)
+                    {
+                        hasAutomatedFields = type
+                            .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Any(x =>
+                                x.CustomAttributes.FirstOrDefault(y => y.AttributeType == typeof(AutomatedField)) !=
+                                null &&
+                                x.IsSerialized());
+                        if (hasAutomatedFields) break;
+                    }
 
                     if (hasAutomatedFields)
                     {
@@ -66,15 +74,16 @@ namespace Helpers.Utils.AutomatedFieldSystem.Editor
             Type indicatorType = target.GetType();
             List<FieldInfo> fieldInfos = new List<FieldInfo>();
             SerializedObject serializedObject = new SerializedObject(target);
+            List<Type> classesToSearch = indicatorType.FindParentClasses();
+            classesToSearch.Add(indicatorType);
 
-            while (indicatorType != null)
+            foreach (Type type in classesToSearch)
             {
                 FieldInfo[] fields =
-                    indicatorType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 foreach (var field in fields)
                     if (fieldInfos.FirstOrDefault(x => x.Name == field.Name) == null)
                         fieldInfos.Add(field);
-                indicatorType = indicatorType.BaseType;
             }
 
             FieldInfo[] serializedFields = fieldInfos.Where(x =>

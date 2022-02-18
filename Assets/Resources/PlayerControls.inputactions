@@ -2,7 +2,7 @@
     "name": "PlayerControls",
     "maps": [
         {
-            "name": "Movement",
+            "name": "Base",
             "id": "bc7fe8a9-fd28-448d-8a33-03270f4d3896",
             "actions": [
                 {
@@ -36,6 +36,30 @@
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "Hold(duration=0.2)"
+                },
+                {
+                    "name": "Interact",
+                    "type": "Button",
+                    "id": "e33a28e9-8be8-4a75-a4c2-b249dc7ef7ff",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
+                    "name": "Fire",
+                    "type": "Button",
+                    "id": "8cd18781-af47-4ef1-a4b9-8334118c47da",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Hold(duration=0.2)"
+                },
+                {
+                    "name": "Reload",
+                    "type": "Button",
+                    "id": "35dc7613-2f02-49f5-96b1-9acf0b1a751a",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
                 }
             ],
             "bindings": [
@@ -126,26 +150,10 @@
                     "action": "Movement",
                     "isComposite": false,
                     "isPartOfComposite": true
-                }
-            ]
-        },
-        {
-            "name": "Interaction",
-            "id": "66aa8be8-af2b-4cf7-8fe8-4f27964571c8",
-            "actions": [
-                {
-                    "name": "Interact",
-                    "type": "Button",
-                    "id": "5ed7343b-2c89-41ac-9bf0-d39eaeea10f7",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "Press"
-                }
-            ],
-            "bindings": [
+                },
                 {
                     "name": "",
-                    "id": "dd3ef7e5-05d3-4d0a-a550-8c885d327aee",
+                    "id": "b1086c05-eba2-4ac2-b277-6eaa5184ae97",
                     "path": "<Keyboard>/e",
                     "interactions": "Press",
                     "processors": "",
@@ -153,34 +161,10 @@
                     "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
-                }
-            ]
-        },
-        {
-            "name": "Action",
-            "id": "c11763ab-50db-4353-ae9b-ae8512ddff2d",
-            "actions": [
-                {
-                    "name": "Fire",
-                    "type": "Button",
-                    "id": "4157e50d-8b50-427a-a48a-90531aee7497",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "Hold(duration=0.2)"
                 },
                 {
-                    "name": "Reload",
-                    "type": "Button",
-                    "id": "7a3e53f3-5bdb-4be7-9963-c707eb6050c9",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "Press"
-                }
-            ],
-            "bindings": [
-                {
                     "name": "",
-                    "id": "b7e2a41a-02a2-486d-85bc-5228169e7222",
+                    "id": "3ec7d0cd-00d3-4b87-a904-01f807e1aabf",
                     "path": "<Mouse>/leftButton",
                     "interactions": "Hold",
                     "processors": "",
@@ -191,7 +175,7 @@
                 },
                 {
                     "name": "",
-                    "id": "e9a1a9e6-5a09-48fc-95f8-b0b7a0a0c5fe",
+                    "id": "ca2e2ef9-7585-4dcd-b115-6f8fe7b9231b",
                     "path": "<Keyboard>/r",
                     "interactions": "",
                     "processors": "",

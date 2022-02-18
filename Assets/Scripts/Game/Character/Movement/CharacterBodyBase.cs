@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Game.Interfaces;
 using Helpers.AutoObject;
 using Helpers.Utilities;
 using Helpers.Utilities.AutomatedFieldSystem.CustomAttributes;
@@ -8,7 +9,7 @@ using UnityEngine;
 namespace Game.Character.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(CapsuleCollider))]
-    public abstract class CharacterBodyBase : AutoObject
+    public class CharacterBodyBase : AutoObject, IPhysicsObject
     {
         [SerializeField] [AutomatedField(SearchIn.Root, SearchType.FirstEncounter)]
         private Rigidbody bodyRb;
@@ -19,9 +20,14 @@ namespace Game.Character.Movement
         [SerializeField] [HideInInspector] private BodyInfo bodyInfo;
 
         public CharacterMovementType MovementType => bodyInfo.characterMovementType;
+        public Rigidbody Rigidbody => bodyRb;
+
+        private Vector3 _movementForce;
 
         private void FixedUpdate()
         {
+            ApplyMovementInput();
+
             switch (bodyInfo.characterMovementType)
             {
                 case CharacterMovementType.Water:
@@ -30,8 +36,11 @@ namespace Game.Character.Movement
                 case CharacterMovementType.Air:
                 case CharacterMovementType.Ground:
                     Vector3 upDirection = objectTransform.up;
+                    Vector3 footPosition =
+                        objectTransform.TransformPoint(bodyCollider.center + bodyInfo.relativeRaycastPoints.First() +
+                                                       upDirection * 0.05f);
                     bodyInfo.characterMovementType = Physics.Raycast(
-                        bodyInfo.relativeRaycastPoints.First() + upDirection * 0.05f, -upDirection, 0.25f,
+                        footPosition, -upDirection, 0.1f,
                         ~bodyInfo.mask, QueryTriggerInteraction.Ignore)
                         ? CharacterMovementType.Ground
                         : CharacterMovementType.Air;
@@ -39,14 +48,24 @@ namespace Game.Character.Movement
             }
         }
 
-        public virtual void ApplyMovementInput(Vector3 movementInput)
+        public void SetMovementInput(Vector3 movementInput)
         {
-            bodyRb.AddForce(movementInput * Time.fixedDeltaTime, ForceMode.VelocityChange);
+            _movementForce = movementInput;
+        }
+
+        private void ApplyMovementInput()
+        {
+            ApplyForce(_movementForce, ForceMode.VelocityChange);
         }
 
         public virtual void Jump(float jumpForce)
         {
-            bodyRb.AddForce(objectTransform.up * jumpForce, ForceMode.VelocityChange);
+            ApplyForce(objectTransform.up * jumpForce, ForceMode.VelocityChange);
+        }
+
+        public void ApplyForce(Vector3 forceAmount, ForceMode forceMode)
+        {
+            bodyRb.AddForce(forceAmount, forceMode);
         }
 
         [FieldInitializer]
@@ -55,9 +74,9 @@ namespace Game.Character.Movement
             try
             {
                 Vector3 height = Vector3.up * bodyCollider.height;
-                bodyInfo.relativeRaycastPoints = new[] { height / 2, Vector3.zero, -height / 2 };
+                bodyInfo.relativeRaycastPoints = new[] { -height / 2, Vector3.zero, height / 2 };
                 bodyInfo.radius = bodyCollider.radius;
-                bodyInfo.mask = this.gameObject.layer;
+                bodyInfo.mask = LayerMask.GetMask(LayerMask.LayerToName(this.gameObject.layer));
             }
             catch (Exception e)
             {
