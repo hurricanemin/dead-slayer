@@ -19,7 +19,7 @@
                     "id": "9f2b498f-0528-4e67-a423-472816ef99c6",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "Press"
+                    "interactions": ""
                 },
                 {
                     "name": "Crouch",
@@ -43,7 +43,7 @@
                     "id": "e33a28e9-8be8-4a75-a4c2-b249dc7ef7ff",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "Press"
+                    "interactions": ""
                 },
                 {
                     "name": "Fire",
@@ -51,7 +51,7 @@
                     "id": "8cd18781-af47-4ef1-a4b9-8334118c47da",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "Hold(duration=0.2)"
+                    "interactions": ""
                 },
                 {
                     "name": "Reload",
@@ -59,7 +59,7 @@
                     "id": "35dc7613-2f02-49f5-96b1-9acf0b1a751a",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "Press"
+                    "interactions": ""
                 }
             ],
             "bindings": [

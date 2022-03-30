@@ -19,48 +19,40 @@ namespace Game.Character.Movement
 
         [SerializeField] [HideInInspector] private BodyInfo bodyInfo;
 
-        public CharacterMovementType MovementType => bodyInfo.characterMovementType;
+        public BodyMovementState MovementState => bodyInfo.bodyMovementState;
         public Rigidbody Rigidbody => bodyRb;
 
-        private Vector3 _movementForce;
+        private Vector3 groundUp;
 
         private void FixedUpdate()
         {
-            ApplyMovementInput();
-
-            switch (bodyInfo.characterMovementType)
+            switch (bodyInfo.bodyMovementState)
             {
-                case CharacterMovementType.Water:
+                case BodyMovementState.Water:
+                    groundUp = objectTransform.up;
                     return;
                 default:
-                case CharacterMovementType.Air:
-                case CharacterMovementType.Ground:
+                case BodyMovementState.Air:
+                case BodyMovementState.Ground:
                     Vector3 upDirection = objectTransform.up;
                     Vector3 footPosition =
                         objectTransform.TransformPoint(bodyCollider.center + bodyInfo.relativeRaycastPoints.First() +
                                                        upDirection * 0.05f);
-                    bodyInfo.characterMovementType = Physics.Raycast(
-                        footPosition, -upDirection, 0.1f,
-                        ~bodyInfo.mask, QueryTriggerInteraction.Ignore)
-                        ? CharacterMovementType.Ground
-                        : CharacterMovementType.Air;
+                    bool isBodyGrounded = Physics.Raycast(
+                        footPosition, -upDirection, out RaycastHit hit, 0.1f,
+                        ~bodyInfo.mask, QueryTriggerInteraction.Ignore);
+                    bodyInfo.bodyMovementState = isBodyGrounded ? BodyMovementState.Ground : BodyMovementState.Air;
+                    groundUp = isBodyGrounded ? hit.normal : objectTransform.up;
                     break;
             }
         }
 
-        public void SetMovementInput(Vector3 movementInput)
+        public void ApplyMovementInput(Vector3 movementInput)
         {
-            _movementForce = movementInput;
-        }
-
-        private void ApplyMovementInput()
-        {
-            ApplyForce(_movementForce, ForceMode.VelocityChange);
-        }
-
-        public virtual void Jump(float jumpForce)
-        {
-            ApplyForce(objectTransform.up * jumpForce, ForceMode.VelocityChange);
+            float angleOffset =
+                Mathf.Clamp(Vector2.SignedAngle(objectTransform.up.GetYZVector(), groundUp.GetYZVector()), -30, 30);
+            Quaternion rotator = Quaternion.Euler(angleOffset, 0, 0);
+            ApplyForce(rotator * movementInput, ForceMode.VelocityChange);
         }
 
         public void ApplyForce(Vector3 forceAmount, ForceMode forceMode)
@@ -88,13 +80,13 @@ namespace Game.Character.Movement
         [Serializable]
         private struct BodyInfo
         {
-            public CharacterMovementType characterMovementType;
+            public BodyMovementState bodyMovementState;
             public Vector3[] relativeRaycastPoints;
             public float radius;
             public int mask;
         }
 
-        public enum CharacterMovementType : byte
+        public enum BodyMovementState : byte
         {
             Air,
             Ground,

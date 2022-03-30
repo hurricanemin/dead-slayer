@@ -59,11 +59,31 @@ namespace Helpers.Utilities.AutomatedFieldSystem.Editor
                         component.CheckVariables();
                     }
 
-                    MethodInfo[] methods =
-                        componentType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-                            .Where(x => x.CustomAttributes.FirstOrDefault(y =>
-                                            y.AttributeType == typeof(FieldInitializer)) !=
-                                        null).ToArray();
+                    List<MethodInfo> methods = new List<MethodInfo>();
+
+                    foreach (var type in typesToSearch)
+                    {
+                        MethodInfo[] foundMethods =
+                            type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                                .Where(x => x.CustomAttributes.FirstOrDefault(y =>
+                                                y.AttributeType == typeof(FieldInitializer)) !=
+                                            null).ToArray();
+
+                        foreach (MethodInfo foundMethod in foundMethods)
+                        {
+                            bool isUnique = true;
+
+                            foreach (var method in methods)
+                            {
+                                if (method.Name != foundMethod.Name) continue;
+                                isUnique = false;
+                                break;
+                            }
+
+                            if (isUnique) methods.Add(foundMethod);
+                        }
+                    }
+
                     foreach (var method in methods) method?.Invoke(component, new object[] { });
                 }
             }

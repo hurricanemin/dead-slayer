@@ -705,12 +705,12 @@ namespace Helpers.Utilities
             return vector2 - 2 * (Vector2.Dot(vector2, normal) / Vector2.Dot(normal, normal)) * normal;
         }
 
-        public static Vector2 GetXzVector(this Vector3 vector3)
+        public static Vector2 GetXZVector(this Vector3 vector3)
         {
             return new Vector2(vector3.x, vector3.z);
         }
 
-        public static Vector2 GetXyVector(this Vector3 vector3)
+        public static Vector2 GetXYVector(this Vector3 vector3)
         {
             return new Vector2(vector3.x, vector3.y);
         }
@@ -941,11 +941,11 @@ namespace Helpers.Utilities
             int screenWidth = isEditor ? mainCamera.pixelWidth : Screen.width;
             float ratio = (float)screenWidth / screenHeight;
             fieldOfView *= ratio;
-            Vector2 positionDifference = (targetObjectPosition - eyePosition).GetXzVector();
+            Vector2 positionDifference = (targetObjectPosition - eyePosition).GetXZVector();
             bool isInViewRange = positionDifference.magnitude <= sightRange;
             if (!isInViewRange) return false;
             Vector2 positionForward = positionDifference.normalized;
-            float angleBetween = Vector2.Angle(lookDirection.GetXzVector(), positionForward);
+            float angleBetween = Vector2.Angle(lookDirection.GetXZVector(), positionForward);
             return angleBetween <= fieldOfView / 2;
         }
 
